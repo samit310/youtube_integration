@@ -1,0 +1,6 @@
+name: 'YouTube Integration'
+type: module
+description: 'Fetched videos from youtube Channel.'
+core: 8.x
+package: 'Custom'
+configure: youtube_integration.youtube_settings

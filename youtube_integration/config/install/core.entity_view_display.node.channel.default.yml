@@ -1,0 +1,34 @@
+langcode: en
+status: true
+dependencies:
+  config:
+    - field.field.node.channel.body
+    - field.field.node.channel.field_title
+    - field.field.node.channel.field_videos_urls
+    - node.type.channel
+  module:
+    - text
+    - user
+id: node.channel.default
+targetEntityType: node
+bundle: channel
+mode: default
+content:
+  body:
+    label: above
+    type: text_default
+    weight: 1
+    settings: {  }
+    third_party_settings: {  }
+    region: content
+  field_title:
+    weight: 0
+    label: inline
+    settings:
+      link_to_entity: true
+    third_party_settings: {  }
+    type: string
+    region: content
+hidden:
+  field_videos_urls: true
+  links: true

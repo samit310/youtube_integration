@@ -1,0 +1,116 @@
+<?php
+
+/**
+ * @file
+ * Contains youtube_integration.module.
+ */
+use Drupal\Core\Routing\RouteMatchInterface;
+use Drupal\Core\Entity\EntityInterface;
+use Drupal\node\NodeInterface;
+
+/**
+ * Implements hook_help().
+ */
+function youtube_integration_help($route_name, RouteMatchInterface $route_match) {
+  switch ($route_name) {
+    // Main module help for the youtube_integration module.
+    case 'help.page.youtube_integration':
+      $output = '';
+      $output .= '<h3>' . t('About') . '</h3>';
+      $output .= '<p>' . t('Fetched videos from youtube Channel.') . '</p>';
+      return $output;
+
+    default:
+  }
+}
+
+/**
+ * Implements hook_entity_insert().
+ */
+function youtube_integration_entity_insert(EntityInterface $entity) {
+  if ($entity instanceof NodeInterface && $entity->bundle() == 'channel') {
+    
+    //Youtube settings Configrations.
+    $config = \Drupal::config('youtube_integration.youtubesettings');
+    if(!$config->get('youtube_api_url') && !$config->get('google_api_key')) {
+      drupal_set_message(t('Youtube configration is not set yet.'), 'error');
+      return;
+    }
+    
+    $api_url = $config->get('youtube_api_url');
+    $api_key = $config->get('google_api_key');
+    $max_results = $config->get('no_of_videos') ?: 10;
+
+    $channelId = $entity->getTitle();
+    
+    //Prepare parameters for googleapis(Youtube)
+    $parameter = [
+      'id' => $channelId,
+      'part' => 'snippet,contentDetails,statistics',
+      'key' => $api_key
+    ];
+
+    $http_query = http_build_query($parameter);
+
+    $path = $api_url . http_build_query($parameter);
+
+    $channeljson = '';
+
+    try {
+      $channeljson = (string) \Drupal::httpClient()->get($path, array('verify' => false))->getBody();
+    }
+    catch (RequestException $e) {
+      
+    }
+    catch (BadResponseException $e) {
+      
+    }
+    catch (\Exception $e) {
+      
+    }
+
+    $channel_data = json_decode($channeljson, true);
+    $uploads_id = $channel_data['items'][0]['contentDetails']['relatedPlaylists']['uploads'];
+
+    if (!empty($channel_data['items'])) {
+      
+      //Channel Details
+      $channel_details = [
+        'title' => $channel_data['items'][0]['snippet']['title'],
+        'description' => $channel_data['items'][0]['snippet']['description'], 
+        ];
+      
+      $youtube_playlist_uri = "https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&}&maxResults={$max_results}&fields=pageInfo/totalResults,items/snippet(resourceId/videoId,title,thumbnails/default/url)&playlistId={$uploads_id}&key={$api_key}";
+      try {
+        $playlistjson = (string) \Drupal::httpClient()->get($youtube_playlist_uri, array('verify' => false))->getBody();
+      }
+      catch (RequestException $e) {
+        
+      }
+      catch (BadResponseException $e) {
+        
+      }
+      catch (\Exception $e) {
+        
+      }
+
+      $feed_array = json_decode($playlistjson, true);
+
+      if ($feed_array['pageInfo']['totalResults'] == 0) {
+        drupal_set_message(t('No Videos'), 'error');
+        return;
+      }
+      
+      // Create Batch process to fetch Channel Videos 
+      foreach ($feed_array['items'] as $key => $videos_data) {
+        $batch[] = ['\Drupal\youtube_integration\GoogleApis::youtubeChannelVideos', [$entity, $channel_details, $videos_data]];
+      }
+      $batch = array(
+        'title' => t('Fetching Channe Videos...'),
+        'operations' => $batch,
+        'finished' => '\Drupal\youtube_integration\GoogleApis::GoogleApisFinishedCallback',
+      );
+      batch_set($batch);
+    }
+  }
+}

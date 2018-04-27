@@ -1,0 +1,7 @@
+youtube_integration.youtube_settings:
+  title: 'Youtube Settings'
+  route_name: youtube_integration.youtube_settings
+  description: 'YouTube Integration settings.'
+  parent: system.admin_config_media
+  weight: 99
+
