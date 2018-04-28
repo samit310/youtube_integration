@@ -1,8 +1,9 @@
 <?php
 
 /**
- * Description of GoogleApis
- *
+ * @file
+ * Contains GoogleApis class.
+ * Batch Process class to save Video data to channel fields. 
  * @author samit.khulve
  */
 
@@ -16,7 +17,6 @@ class GoogleApis {
   public static function youtubeChannelVideos($entity, $channel_details, $videos_data, &$context) {
     $videoId = $videos_data['snippet']['resourceId']['videoId'];
     $message = t('Fetching %video Video & save in %title...', ['%video' => $videoId, '%title' => $entity->get('title')]);
-    $results = $i;
 
     if (GoogleApis::$count == 0) {
       GoogleApis::$node = \Drupal::entityTypeManager()->getStorage('node')->load($entity->id());
@@ -29,7 +29,7 @@ class GoogleApis {
     GoogleApis::$node->save();
 
     $context['message'] = $message;
-    $context['results'] = $results;
+    $context['results'] = GoogleApis::$count;
   }
 
   public static function GoogleApisFinishedCallback($success, $results, $operations) {
